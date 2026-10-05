@@ -6,7 +6,7 @@ A portable college-project implementation based on the provided GameHub research
 
 !\[Home page](screenshots/home.png)
 
-!\[Games page](screenshots/games.png)
+!\[Login page](screenshots/login.png)
 
 !\[Leaderboard](screenshots/leaderboard.png)
 
@@ -39,7 +39,7 @@ A portable college-project implementation based on the provided GameHub research
 `python -m venv .venv`
 4. Activate the environment:
 Windows:
-`.venv\\Scripts\\activate`
+`.venv\\\\Scripts\\\\activate`
 macOS/Linux:
 `source .venv/bin/activate`
 5. Install packages:
