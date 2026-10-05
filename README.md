@@ -4,11 +4,19 @@ A portable college-project implementation based on the provided GameHub research
 
 &#x20;## Screenshots
 
-!\[Home page](screenshots/home.png)
+##### 
 
-!\[Login page](screenshots/login.png)
+##### !\[Home page](screenshots/home.png)
 
-!\[Leaderboard](screenshots/leaderboard.png)
+##### 
+
+##### !\[Login page](screenshots/login.png)
+
+##### 
+
+##### !\[Leaderboard](screenshots/leaderboard.png)
+
+## 
 
 ## Technology stack
 
