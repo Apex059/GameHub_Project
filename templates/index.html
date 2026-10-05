@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}GameHub — Gaming Community{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7">
+        <span class="eyebrow">DISCOVER · CONNECT · COMPETE</span>
+        <h1>Your gaming world,<br><span>in one place.</span></h1>
+        <p class="lead">Discover games, share reviews, join discussions, track your library and compete in community tournaments.</p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="{{ url_for('games') }}" class="btn btn-primary btn-lg">Explore Games <i class="bi bi-arrow-right"></i></a>
+          <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">Create Profile</a>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="hero-card">
+          <div class="hero-icon"><i class="bi bi-controller"></i></div>
+          <h3>One hub for gamers</h3>
+          <p>Reviews • Community • Recommendations • Tournaments • Leaderboards</p>
+          <div class="mini-stat"><strong>8+</strong><span>Games to explore</span></div>
+          <div class="mini-stat"><strong>24/7</strong><span>Community access</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="section-head"><div><span class="eyebrow dark">EXPLORE</span><h2>Featured Games</h2></div><a href="{{ url_for('games') }}">View all <i class="bi bi-arrow-right"></i></a></div>
+  <div class="row g-4">
+    {% for game in games %}
+    <div class="col-sm-6 col-lg-4">
+      <a class="game-card" href="{{ url_for('game_detail', game_id=game.id) }}">
+        <img src="{{ game.image }}" alt="{{ game.title }}">
+        <div class="game-card-body"><span>{{ game.genre }}</span><h4>{{ game.title }}</h4><small>{{ game.platform }}</small></div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="dark-section py-5">
+  <div class="container">
+    <div class="section-head light"><div><span class="eyebrow">COMPETE</span><h2>Upcoming Tournaments</h2></div><a href="{{ url_for('tournaments') }}">See tournaments <i class="bi bi-arrow-right"></i></a></div>
+    <div class="row g-3">
+      {% for t in tournaments %}
+      <div class="col-md-4"><div class="tournament-card"><div class="date-box">{{ t.event_date[5:7] }}<small>{{ t.event_date[:4] }}</small></div><div><span>{{ t.game_title }}</span><h4>{{ t.name }}</h4><p>{{ t.players }}/{{ t.max_players }} players · {{ t.format }}</p></div></div></div>
+      {% else %}<p>No tournaments yet.</p>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

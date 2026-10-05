@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Target Shooter — GameHub</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            margin: 0;
+            background: #0b0f19;
+            color: #f8fafc;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .game-header {
+            background: #111827;
+            border: 1px solid #263244;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .game-header h1 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .game-header p {
+            color: #94a3b8;
+            margin-top: 8px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px 20px;
+            min-width: 120px;
+        }
+
+        .stat-box span {
+            display: block;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .stat-box strong {
+            font-size: 24px;
+            color: #ffffff;
+        }
+
+        /* GAME AREA */
+
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background:
+                radial-gradient(circle at center, #172033 0%, #0f172a 70%);
+            border: 2px solid #334155;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        /* Decorative stars */
+
+        .star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #94a3b8;
+            border-radius: 50%;
+            opacity: 0.5;
+        }
+
+        /* ENEMY */
+
+        .enemy {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: #ef4444;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+            cursor: crosshair;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 27px;
+            user-select: none;
+        }
+
+        .enemy:hover {
+            transform: scale(1.08);
+        }
+
+        .enemy.fast {
+            background: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.7);
+        }
+
+        .enemy.bonus {
+            background: #8b5cf6;
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.8);
+        }
+
+        /* MESSAGE */
+
+        #message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            padding: 20px;
+            z-index: 50;
+        }
+
+        /* CONTROLS */
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .start-btn {
+            background: #6d5dfc;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .start-btn:hover {
+            background: #5848e8;
+        }
+
+        .start-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 15px;
+            color: #cbd5e1;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            color: #ffffff;
+        }
+
+        /* INSTRUCTIONS */
+
+        .instructions {
+            margin-top: 15px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        /* HIT EFFECT */
+
+        .hit-effect {
+            position: absolute;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 22px;
+            pointer-events: none;
+            animation: hitAnimation 0.6s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes hitAnimation {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.4);
+            }
+        }
+
+        /* DAMAGE EFFECT */
+
+        .damage-effect {
+            position: absolute;
+            inset: 0;
+            background: rgba(239, 68, 68, 0.25);
+            pointer-events: none;
+            z-index: 40;
+            animation: damageFlash 0.25s ease-out;
+        }
+
+        @keyframes damageFlash {
+            0% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="game-wrapper">
+
+    <div class="game-header">
+
+        <h1>🔫 Target Shooter</h1>
+
+        <p>
+            Shoot the moving enemies before they escape!
+            Survive for 30 seconds and get the highest score.
+        </p>
+
+        <div class="stats">
+
+            <div class="stat-box">
+                <span>Time</span>
+                <strong id="timer">30</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Score</span>
+                <strong id="score">0</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Lives</span>
+                <strong id="lives">❤️❤️❤️</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Best Score</span>
+                <strong>{{ best_score }}</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="gameArea">
+
+        <div class="star" style="left: 10%; top: 15%;"></div>
+        <div class="star" style="left: 25%; top: 35%;"></div>
+        <div class="star" style="left: 45%; top: 12%;"></div>
+        <div class="star" style="left: 65%; top: 25%;"></div>
+        <div class="star" style="left: 85%; top: 15%;"></div>
+        <div class="star" style="left: 15%; top: 75%;"></div>
+        <div class="star" style="left: 35%; top: 85%;"></div>
+        <div class="star" style="left: 60%; top: 70%;"></div>
+        <div class="star" style="left: 80%; top: 80%;"></div>
+
+        <div id="message">
+            Click <b>&nbsp;Start Game&nbsp;</b> to begin
+        </div>
+
+    </div>
+
+
+    <div class="instructions">
+        🔴 Normal Enemy = +10 points &nbsp;&nbsp;
+        🟠 Fast Enemy = +20 points &nbsp;&nbsp;
+        🟣 Bonus Enemy = +50 points
+        <br>
+        Don't let enemies escape! Each escaped enemy costs one ❤️.
+    </div>
+
+
+    <div class="controls">
+
+        <button
+            id="startButton"
+            class="start-btn"
+            onclick="startGame()"
+        >
+            Start Game
+        </button>
+
+        <br>
+
+        <a
+            href="{{ url_for('game_detail', game_id=game.id) }}"
+            class="back-btn"
+        >
+            ← Back to Game
+        </a>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    let gameRunning = false;
+
+    let score = 0;
+    let difficulty = 1;
+    let timeLeft = 30;
+    let lives = 3;
+
+    let countdownTimer = null;
+    let spawnTimer = null;
+
+    let enemies = [];
+
+    const gameArea = document.getElementById("gameArea");
+
+    const timerDisplay =
+        document.getElementById("timer");
+
+    const scoreDisplay =
+        document.getElementById("score");
+
+    const livesDisplay =
+        document.getElementById("lives");
+
+    const message =
+        document.getElementById("message");
+
+    const startButton =
+        document.getElementById("startButton");
+
+
+    /*
+     * START GAME
+     */
+
+    function startGame() {
+
+        if (gameRunning) {
+            return;
+        }
+
+        gameRunning = true;
+
+        score = 0;
+        timeLeft = 30;
+        lives = 3;
+        difficulty = 1;
+
+        enemies = [];
+
+        scoreDisplay.textContent = score;
+        timerDisplay.textContent = timeLeft;
+
+        updateLives();
+
+        message.style.display = "none";
+
+        startButton.disabled = true;
+        startButton.textContent = "Game Running...";
+
+
+        /*
+         * Create first enemies.
+         */
+
+        spawnEnemy();
+        spawnEnemy();
+
+
+        /*
+         * Spawn enemies repeatedly.
+         */
+
+        spawnTimer = setInterval(function() {
+
+            if (gameRunning) {
+                spawnEnemy();
+            }
+
+        }, 1000);
+
+
+        /*
+         * Countdown.
+         */
+
+        countdownTimer = setInterval(function() {
+
+            timeLeft--;
+
+            timerDisplay.textContent = timeLeft;
+ 
+            // Gradually increase enemy speed
+            difficulty += 0.08;
+
+            /*
+             * Increase difficulty.
+             */
+
+            if (timeLeft === 20) {
+                spawnEnemy();
+            }
+
+            if (timeLeft === 10) {
+                spawnEnemy();
+                spawnEnemy();
+            }
+
+
+            if (timeLeft <= 0) {
+
+                gameOver();
+
+            }
+
+        }, 1000);
+
+    }
+
+
+    /*
+     * CREATE ENEMY
+     */
+
+    function spawnEnemy() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+
+        const enemy =
+            document.createElement("div");
+
+        enemy.classList.add("enemy");
+
+
+        /*
+         * Random enemy type.
+         */
+
+        const random =
+            Math.random();
+
+
+        let points = 10;
+        let speed = 2.8 * difficulty;
+
+
+        if (random < 0.20) {
+
+            /*
+             * Bonus enemy
+             */
+
+            enemy.classList.add("bonus");
+
+            enemy.textContent = "💎";
+
+            points = 50;
+
+            speed = 2.0;
+
+        }
+
+        else if (random < 0.45) {
+
+            /*
+             * Fast enemy
+             */
+
+            enemy.classList.add("fast");
+
+            enemy.textContent = "⚡";
+
+            points = 20;
+
+            speed = 3.2;
+
+        }
+
+        else {
+
+            /*
+             * Normal enemy
+             */
+
+            enemy.textContent = "👾";
+
+            points = 10;
+
+            speed = 1.5;
+
+        }
+
+
+        /*
+         * Random starting position.
+         */
+
+        const maxX =
+            gameArea.clientWidth - 70;
+
+        const maxY =
+            gameArea.clientHeight - 70;
+
+
+        const x =
+            Math.random() * maxX;
+
+        const y =
+            Math.random() * maxY;
+
+
+        enemy.style.left = x + "px";
+        enemy.style.top = y + "px";
+
+
+        gameArea.appendChild(enemy);
+
+
+        const enemyData = {
+
+            element: enemy,
+
+            x: x,
+
+            y: y,
+
+            points: points,
+
+            speed: speed,
+
+            dx:
+                (Math.random() > 0.5 ? 1 : -1)
+                * speed,
+
+            dy:
+                (Math.random() > 0.5 ? 1 : -1)
+                * speed
+
+        };
+
+
+        enemies.push(enemyData);
+
+
+        /*
+         * Shoot enemy.
+         */
+
+        enemy.addEventListener(
+            "click",
+            function(event) {
+
+                event.stopPropagation();
+
+                if (!gameRunning) {
+                    return;
+                }
+
+
+                score += enemyData.points;
+
+                scoreDisplay.textContent = score;
+
+
+                showHitEffect(
+                    enemyData.x,
+                    enemyData.y,
+                    "+" + enemyData.points
+                );
+
+
+                enemy.remove();
+
+
+                enemies =
+                    enemies.filter(
+                        e => e !== enemyData
+                    );
+
+            }
+        );
+
+    }
+
+
+    /*
+     * MOVE ENEMIES
+     */
+
+    function moveEnemies() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+
+        const width =
+            gameArea.clientWidth;
+
+        const height =
+            gameArea.clientHeight;
+
+
+        enemies.forEach(function(enemyData) {
+
+            enemyData.x += enemyData.dx;
+            enemyData.y += enemyData.dy;
+
+
+            /*
+             * Bounce from left/right walls.
+             */
+
+            if (
+                enemyData.x <= 0 ||
+                enemyData.x >= width - 60
+            ) {
+
+                enemyData.dx *= -1;
+
+            }
+
+
+            /*
+             * Bounce from top/bottom walls.
+             */
+
+            if (
+                enemyData.y <= 0 ||
+                enemyData.y >= height - 60
+            ) {
+
+                enemyData.dy *= -1;
+
+            }
+
+
+            enemyData.element.style.left =
+                enemyData.x + "px";
+
+            enemyData.element.style.top =
+                enemyData.y + "px";
+
+        });
+
+
+        requestAnimationFrame(moveEnemies);
+
+    }
+
+
+    /*
+     * START MOVEMENT LOOP
+     */
+
+    requestAnimationFrame(moveEnemies);
+
+
+    /*
+     * UPDATE LIVES
+     */
+
+    function updateLives() {
+
+        if (lives === 3) {
+
+            livesDisplay.textContent =
+                "❤️❤️❤️";
+
+        }
+
+        else if (lives === 2) {
+
+            livesDisplay.textContent =
+                "❤️❤️";
+
+        }
+
+        else if (lives === 1) {
+
+            livesDisplay.textContent =
+                "❤️";
+
+        }
+
+        else {
+
+            livesDisplay.textContent =
+                "💀";
+
+        }
+
+    }
+
+
+    /*
+     * ENEMY ESCAPES / DAMAGE
+     *
+     * Enemies disappear after a short time.
+     */
+
+    setInterval(function() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+
+        if (enemies.length > 5) {
+
+            const enemyData =
+                enemies.shift();
+
+
+            if (enemyData) {
+
+                enemyData.element.remove();
+
+                lives--;
+
+                updateLives();
+
+                showDamageEffect();
+
+
+                if (lives <= 0) {
+
+                    gameOver();
+
+                }
+
+            }
+
+        }
+
+    }, 2500);
+
+
+    /*
+     * HIT EFFECT
+     */
+
+    function showHitEffect(x, y, text) {
+
+        const effect =
+            document.createElement("div");
+
+        effect.className =
+            "hit-effect";
+
+        effect.textContent = text;
+
+        effect.style.left =
+            x + "px";
+
+        effect.style.top =
+            y + "px";
+
+        gameArea.appendChild(effect);
+
+
+        setTimeout(function() {
+
+            effect.remove();
+
+        }, 600);
+
+    }
+
+
+    /*
+     * DAMAGE EFFECT
+     */
+
+    function showDamageEffect() {
+
+        const effect =
+            document.createElement("div");
+
+        effect.className =
+            "damage-effect";
+
+        gameArea.appendChild(effect);
+
+
+        setTimeout(function() {
+
+            effect.remove();
+
+        }, 250);
+
+    }
+
+
+    /*
+     * GAME OVER
+     */
+
+    function gameOver() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+        gameRunning = false;
+
+
+        clearInterval(countdownTimer);
+        clearInterval(spawnTimer);
+
+
+        /*
+         * Remove all enemies.
+         */
+
+        enemies.forEach(function(enemyData) {
+
+            enemyData.element.remove();
+
+        });
+
+
+        enemies = [];
+
+
+        timerDisplay.textContent = "0";
+
+
+        startButton.disabled = false;
+        startButton.textContent = "Play Again";
+
+
+        message.style.display = "flex";
+
+
+        if (lives <= 0) {
+
+            message.innerHTML =
+                "💀 GAME OVER!<br><br>" +
+                "You ran out of lives!<br>" +
+                "Final Score: " + score;
+
+        }
+
+        else {
+
+            message.innerHTML =
+                "🎯 TIME UP!<br><br>" +
+                "Final Score: " + score +
+                "<br>" +
+                "Lives Remaining: " + lives;
+
+        }
+
+
+        /*
+         * SAVE SCORE
+         */
+
+        {% if current_user.is_authenticated %}
+
+        fetch(
+            "{{ url_for('save_game_score', game_id=game.id) }}",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    score: score
+                })
+            }
+        )
+        .then(response => response.json())
+        .then(data => {
+
+            console.log(
+                "Target Shooter score saved:",
+                data
+            );
+
+        })
+        .catch(error => {
+
+            console.error(
+                "Error saving score:",
+                error
+            );
+
+        });
+
+        {% endif %}
+
+    }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Play {{ game.title }} — GameHub{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="eyebrow dark">GAME</span>
+            <h1>{{ game.title }}</h1>
+        </div>
+
+        <a href="{{ url_for('game_detail', game_id=game.id) }}"
+           class="btn btn-outline-secondary">
+            ← Back to Game
+        </a>
+    </div>
+
+    <div class="game-wrapper">
+
+        <div class="game-header">
+            <h2>🚗 Car Soccer</h2>
+
+            <div>
+               ⏱️ Time:
+               <strong id="timer">30</strong>
+
+               &nbsp;&nbsp;
+
+               ⭐ Score:
+               <strong id="score">0</strong>
+
+                &nbsp;&nbsp;
+
+               🏆 Best:
+                <strong>{{ best_score }}</strong>
+            </div>
+
+        <div id="gameArea">
+
+            <div id="car">🚗</div>
+
+            <div id="ball">⚽</div>
+
+            <div id="message">
+                Click Start Game to begin
+            </div>
+
+        </div>
+
+        <div class="text-center mt-4">
+
+            <button id="startButton"
+                    class="btn btn-primary">
+                Start Game
+            </button>
+
+            <p class="text-muted mt-3">
+                Move the car and hit the football!
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<style>
+
+.game-wrapper {
+    max-width: 800px;
+    margin: auto;
+    padding: 30px;
+    border-radius: 20px;
+    background: #f8f9fa;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+#gameArea {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    background: #167c3a;
+    border: 4px solid #222;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+#car {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 55px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#ball {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 42px;
+    user-select: none;
+}
+
+#message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    font-weight: bold;
+}
+
+</style>
+
+<script>
+
+const gameArea = document.getElementById("gameArea");
+const car = document.getElementById("car");
+const ball = document.getElementById("ball");
+const timerElement = document.getElementById("timer");
+const scoreElement = document.getElementById("score");
+const startButton = document.getElementById("startButton");
+const message = document.getElementById("message");
+
+let score = 0;
+let timeLeft = 30;
+let lives = 3;
+let gameRunning = false;
+
+let carX = 50;
+let ballX = 50;
+let ballY = 15;
+
+let ballSpeed = 0.35;
+let carSpeed = 5;
+
+let keys = {
+    left: false,
+    right: false
+};
+
+let gameLoop;
+let countdownTimer;
+
+
+/* =========================
+   KEYBOARD CONTROLS
+========================= */
+
+document.addEventListener("keydown", function(event) {
+
+    if (event.key === "ArrowLeft") {
+        keys.left = true;
+    }
+
+    if (event.key === "ArrowRight") {
+        keys.right = true;
+    }
+
+});
+
+
+document.addEventListener("keyup", function(event) {
+
+    if (event.key === "ArrowLeft") {
+        keys.left = false;
+    }
+
+    if (event.key === "ArrowRight") {
+        keys.right = false;
+    }
+
+});
+
+
+/* =========================
+   UPDATE CAR
+========================= */
+
+function updateCar() {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    if (keys.left) {
+        carX -= carSpeed * 0.12;
+    }
+
+    if (keys.right) {
+        carX += carSpeed * 0.12;
+    }
+
+    carX = Math.max(5, Math.min(95, carX));
+
+    car.style.left = carX + "%";
+}
+
+
+/* =========================
+   NEW BALL
+========================= */
+
+function spawnBall() {
+
+    // Random horizontal starting position
+    ballX = Math.random() * 80 + 10;
+
+    // Random starting height
+    ballY = Math.random() * 10 + 5;
+
+    ballSpeed = Math.min(
+        0.75,
+        0.30 + score * 0.002
+    );
+
+    ball.style.left = ballX + "%";
+    ball.style.top = ballY + "%";
+}
+
+
+/* =========================
+   CHECK COLLISION
+========================= */
+
+function checkCollision() {
+
+    const carRect = car.getBoundingClientRect();
+    const ballRect = ball.getBoundingClientRect();
+
+    const collision =
+        carRect.left < ballRect.right &&
+        carRect.right > ballRect.left &&
+        carRect.top < ballRect.bottom &&
+        carRect.bottom > ballRect.top;
+
+    if (collision) {
+
+        score += 10;
+
+        scoreElement.textContent = score;
+
+       /*
+        * Spawn a completely new ball
+        * at a random position.
+        */
+
+        spawnBall();
+
+        /*
+         * Increase difficulty.
+         */
+
+        ballSpeed += 0.015;
+
+        /*
+         * Goal chance.
+         */
+
+        if (Math.random() < 0.25) {
+
+            score += 50;
+
+            scoreElement.textContent = score;
+
+            message.style.display = "block";
+            message.innerHTML = "⚽ GOAL! +50 🔥";
+
+            setTimeout(function() {
+
+                if (gameRunning) {
+                    message.style.display = "none";
+                }
+
+            }, 600);
+        }
+    }
+}
+
+
+/* =========================
+   GAME LOOP
+========================= */
+
+function updateGame() {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    updateCar();
+
+    ballY += ballSpeed;
+
+    ball.style.top = ballY + "%";
+
+    checkCollision();
+
+    /*
+     * Ball reached the bottom.
+     */
+
+    if (ballY >= 88) {
+
+        lives--;
+
+        /*
+         * Flash warning.
+         */
+
+        message.style.display = "block";
+        message.innerHTML =
+            "❌ MISSED! Lives: " + "❤️".repeat(lives);
+
+        setTimeout(function() {
+
+            if (gameRunning) {
+                message.style.display = "none";
+            }
+
+        }, 700);
+
+        /*
+         * No lives left.
+         */
+
+        if (lives <= 0) {
+            gameOver();
+            return;
+        }
+
+        spawnBall();
+    }
+
+    gameLoop = requestAnimationFrame(updateGame);
+}
+
+
+/* =========================
+   START GAME
+========================= */
+
+function startGame() {
+
+    cancelAnimationFrame(gameLoop);
+    clearInterval(countdownTimer);
+
+    score = 0;
+    timeLeft = 30;
+    lives = 3;
+
+    carX = 50;
+
+    scoreElement.textContent = score;
+    timerElement.textContent = timeLeft;
+
+    car.style.left = "50%";
+
+    message.style.display = "none";
+
+    gameRunning = true;
+
+    startButton.textContent = "Restart Game";
+
+    spawnBall();
+
+    /*
+     * Countdown.
+     */
+
+    countdownTimer = setInterval(function() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+        timeLeft--;
+
+        timerElement.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+            gameOver();
+        }
+
+    }, 1000);
+
+    /*
+     * Start game loop.
+     */
+
+    updateGame();
+}
+
+
+/* =========================
+   GAME OVER
+========================= */
+
+function gameOver() {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    gameRunning = false;
+
+    cancelAnimationFrame(gameLoop);
+    clearInterval(countdownTimer);
+
+    message.style.display = "block";
+
+    message.innerHTML =
+        "🏁 GAME OVER!<br>" +
+        "Final Score: " + score;
+
+    /*
+     * Save score to database.
+     */
+
+    {% if current_user.is_authenticated %}
+
+    fetch("{{ url_for('save_game_score', game_id=game.id) }}", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            score: score
+        })
+
+    })
+
+    .then(response => response.json())
+
+    .then(data => {
+        console.log("Score saved:", data);
+    })
+
+    .catch(error => {
+        console.error("Error saving score:", error);
+    });
+
+    {% endif %}
+}
+
+
+/* =========================
+   START BUTTON
+========================= */
+
+startButton.addEventListener("click", startGame);
+
+
+/* =========================
+   TOUCH / MOUSE CONTROL
+========================= */
+
+gameArea.addEventListener("mousemove", function(event) {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    const rect = gameArea.getBoundingClientRect();
+
+    const mouseX =
+        ((event.clientX - rect.left) / rect.width) * 100;
+
+    carX = Math.max(5, Math.min(95, mouseX));
+
+});
+
+
+gameArea.addEventListener("touchmove", function(event) {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    const touch = event.touches[0];
+
+    const rect = gameArea.getBoundingClientRect();
+
+    const touchX =
+        ((touch.clientX - rect.left) / rect.width) * 100;
+
+    carX = Math.max(5, Math.min(95, touchX));
+
+}, { passive: true });
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Aim Trainer — GameHub</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            margin: 0;
+            background: #0b0f19;
+            color: #f8fafc;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .game-header {
+            background: #111827;
+            border: 1px solid #263244;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .game-header h1 {
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .game-header p {
+            color: #94a3b8;
+            margin-top: 8px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px 20px;
+            min-width: 120px;
+        }
+
+        .stat-box span {
+            display: block;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .stat-box strong {
+            font-size: 24px;
+            color: #ffffff;
+        }
+
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #target {
+            position: absolute;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: #ef4444;
+            border: 5px solid #ffffff;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+            display: none;
+            cursor: crosshair;
+            transform: translate(-50%, -50%);
+        }
+
+        #target::before {
+            content: "";
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: #ffffff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #target::after {
+            content: "";
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #ef4444;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .start-btn {
+            background: #6d5dfc;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .start-btn:hover {
+            background: #5848e8;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 15px;
+            color: #cbd5e1;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="game-wrapper">
+
+    <div class="game-header">
+
+        <h1>🎯 Aim Trainer</h1>
+
+        <p>
+            Test your aim and reaction speed. Hit as many targets as possible
+            before the timer runs out!
+        </p>
+
+        <div class="stats">
+
+            <div class="stat-box">
+                <span>Time</span>
+                <strong id="timer">30</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Score</span>
+                <strong id="score">0</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Accuracy</span>
+                <strong id="accuracy">100%</strong>
+            </div>
+
+            <div class="stat-box">
+                <span>Best Score</span>
+                <strong>{{ best_score }}</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="gameArea">
+
+        <div id="message">
+            Click <b>&nbsp;Start Game&nbsp;</b> to begin
+        </div>
+
+        <div id="target"></div>
+
+    </div>
+
+    <div class="controls">
+
+        <button
+            id="startButton"
+            class="start-btn"
+            onclick="startGame()"
+        >
+            Start Game
+        </button>
+
+        <br>
+
+        <a
+            href="{{ url_for('game_detail', game_id=game.id) }}"
+            class="back-btn"
+        >
+            ← Back to Game
+        </a>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    let gameRunning = false;
+
+    let score = 0;
+    let timeLeft = 30;
+
+    let totalClicks = 0;
+    let successfulHits = 0;
+
+    let countdownTimer = null;
+    let targetTimer = null;
+
+    const gameArea = document.getElementById("gameArea");
+    const target = document.getElementById("target");
+
+    const timerDisplay = document.getElementById("timer");
+    const scoreDisplay = document.getElementById("score");
+    const accuracyDisplay = document.getElementById("accuracy");
+
+    const message = document.getElementById("message");
+    const startButton = document.getElementById("startButton");
+
+
+    /*
+     * Move target to a random position.
+     */
+    function moveTarget() {
+
+        if (!gameRunning) {
+            return;
+        }
+
+        const areaWidth = gameArea.clientWidth;
+        const areaHeight = gameArea.clientHeight;
+
+        const targetSize = target.offsetWidth;
+
+        const padding = targetSize;
+
+        const x =
+            padding +
+            Math.random() *
+            (areaWidth - padding * 2);
+
+        const y =
+            padding +
+            Math.random() *
+            (areaHeight - padding * 2);
+
+        target.style.left = x + "px";
+        target.style.top = y + "px";
+
+        target.style.display = "block";
+
+        /*
+         * The target becomes slightly faster as the player scores.
+         */
+        const delay = Math.max(
+            250,
+            900 - (score * 25)
+        );
+
+        clearTimeout(targetTimer);
+
+        targetTimer = setTimeout(
+            moveTarget,
+            delay
+        );
+    }
+
+
+    /*
+     * Start the game.
+     */
+    function startGame() {
+
+        if (gameRunning) {
+            return;
+        }
+
+        gameRunning = true;
+
+        score = 0;
+        timeLeft = 30;
+
+        totalClicks = 0;
+        successfulHits = 0;
+
+        scoreDisplay.textContent = score;
+        timerDisplay.textContent = timeLeft;
+        accuracyDisplay.textContent = "100%";
+
+        message.style.display = "none";
+
+        startButton.disabled = true;
+        startButton.textContent = "Game Running...";
+
+        moveTarget();
+
+        countdownTimer = setInterval(function () {
+
+            timeLeft--;
+
+            timerDisplay.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+
+                gameOver();
+
+            }
+
+        }, 1000);
+
+    }
+
+
+    /*
+     * When the player hits the target.
+     */
+    target.addEventListener("click", function(event) {
+
+        if (!gameRunning) {
+            return;
+        }
+
+        /*
+         * Prevent the click from being counted
+         * as a miss by the game area.
+         */
+        event.stopPropagation();
+
+        successfulHits++;
+
+        score++;
+
+        scoreDisplay.textContent = score;
+
+        updateAccuracy();
+
+        /*
+         * Make the target smaller as the score increases.
+         */
+        const newSize = Math.max(
+            30,
+            65 - (score * 2)
+        );
+
+        target.style.width = newSize + "px";
+        target.style.height = newSize + "px";
+
+        moveTarget();
+
+    });
+
+
+    /*
+     * Count clicks that miss the target.
+     */
+    gameArea.addEventListener("click", function(event) {
+
+        if (!gameRunning) {
+            return;
+        }
+
+        totalClicks++;
+
+        updateAccuracy();
+
+    });
+
+
+    /*
+     * Update accuracy percentage.
+     */
+    function updateAccuracy() {
+
+        const attempts =
+            successfulHits + totalClicks;
+
+        if (attempts === 0) {
+
+            accuracyDisplay.textContent = "100%";
+
+            return;
+        }
+
+        const accuracy =
+            Math.round(
+                (successfulHits / attempts) * 100
+            );
+
+        accuracyDisplay.textContent =
+            accuracy + "%";
+
+    }
+
+
+    /*
+     * End the game.
+     */
+    function gameOver() {
+
+        gameRunning = false;
+
+        clearInterval(countdownTimer);
+        clearTimeout(targetTimer);
+
+        target.style.display = "none";
+
+        timerDisplay.textContent = "0";
+
+        startButton.disabled = false;
+        startButton.textContent = "Play Again";
+
+        message.style.display = "flex";
+
+        message.innerHTML =
+            "🎯 GAME OVER!<br><br>" +
+            "Your Score: " + score +
+            "<br>" +
+            "Accuracy: " + accuracyDisplay.textContent;
+
+        /*
+         * Save score to the GameHub leaderboard.
+         */
+        {% if current_user.is_authenticated %}
+
+        fetch(
+            "{{ url_for('save_game_score', game_id=game.id) }}",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    score: score
+                })
+            }
+        )
+        .then(response => response.json())
+        .then(data => {
+
+            console.log(
+                "Aim Trainer score saved:",
+                data
+            );
+
+        })
+        .catch(error => {
+
+            console.error(
+                "Error saving score:",
+                error
+            );
+
+        });
+
+        {% endif %}
+
+    }
+
+</script>
+
+</body>
+</html>
